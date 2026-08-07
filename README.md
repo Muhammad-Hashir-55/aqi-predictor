@@ -16,35 +16,32 @@ automated CI/CD, and an interactive dashboard.
 
 ## Project Structure
 
-\```
+```
 aqi-predictor/
 ├── .env.example              # template for required API keys
+├── .gitignore
+├── README.md
 ├── requirements.txt
 ├── src/
 │   ├── config.py              # city coords, secrets, AQI hazard classifier
-│   ├── feature_pipeline.py    # fetch -> compute features -> write to Hopsworks
-│   ├── backfill_historical.py     [next]
-│   └── training_pipeline.py       [next]
-├── app/
-│   └── dashboard.py                [next] Streamlit dashboard
-├── .github/workflows/
-│   ├── feature_pipeline.yml        [next] hourly cron
-│   └── training_pipeline.yml       [next] daily cron
-├── tests/
-└── data/                       # local scratch space, gitignored
-\```
+│   └── feature_pipeline.py    # fetch -> compute features -> write to Hopsworks
+├── app/                      # currently empty
+├── data/                     # local scratch space, gitignored
+├── tests/                    # currently empty
+└── .github/workflows/        # currently empty
+```
 
 ## Setup
 
-\```bash
-git clone <repo-url>
+```bash
+git clone https://github.com/Muhammad-Hashir-55/aqi-predictor.git
 cd aqi-predictor
 py -3.12 -m venv venv
 venv\Scripts\activate          # Windows
 pip install --upgrade pip
 pip install -r requirements.txt
-cp .env.example .env            # then fill in your real keys
-\```
+copy .env.example .env         # Windows: then fill in your real keys
+```
 
 Required keys in `.env`:
 - `OPENWEATHER_API_KEY` — from [home.openweathermap.org/api_keys](https://home.openweathermap.org/api_keys)
