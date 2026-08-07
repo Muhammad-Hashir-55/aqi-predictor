@@ -1,0 +1,14 @@
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
+python-dotenv>=1.0
+hopsworks>=3.7
+scikit-learn>=1.4
+tensorflow
+torch>=2.2
+shap>=0.45
+streamlit>=1.35
+fastapi>=0.111
+uvicorn>=0.30
+matplotlib>=3.8
+seaborn>=0.13

@@ -1,0 +1,35 @@
+# Environments
+venv/
+env/
+.venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data / model artifacts (kept out of git — feature store & model registry own these)
+data/
+*.csv
+*.parquet
+*.pkl
+*.joblib
+*.h5
+*.pt
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
