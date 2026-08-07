@@ -54,13 +54,13 @@ Required keys in `.env`:
 
 ## Running
 
-\```bash
+```bash
 # Fetch + compute features without writing to Hopsworks (sanity check)
 python src/feature_pipeline.py --dry-run
 
 # Full run — writes to the Hopsworks feature store
 python src/feature_pipeline.py
-\```
+```
 
 ## Progress So Far
 
