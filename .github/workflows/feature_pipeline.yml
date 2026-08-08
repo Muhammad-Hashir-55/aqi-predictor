@@ -2,8 +2,8 @@ name: Hourly Feature Pipeline
 
 on:
   schedule:
-    - cron: '15 * * * *' # Runs at minute 15 past every hour
-  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+    - cron: '15 * * * *' # Runs at 15 minutes past every hour
+  workflow_dispatch:
 
 jobs:
   run-feature-pipeline:

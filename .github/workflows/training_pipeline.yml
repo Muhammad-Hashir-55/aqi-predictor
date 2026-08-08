@@ -2,7 +2,7 @@ name: Daily Training Pipeline
 
 on:
   schedule:
-    - cron: '0 2 * * *' # Runs at 02:00 UTC every day
+    - cron: '0 12 * * *' # Runs at 12:00 UTC (5:00 PM PKT) every day
   workflow_dispatch:
 
 jobs:
