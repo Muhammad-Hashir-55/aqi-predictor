@@ -355,6 +355,7 @@ OPENWEATHER_API_KEY=your_openweather_api_key
 SUPABASE_DB_URL=your_supabase_transaction_pooler_connection_string
 HF_TOKEN=your_huggingface_write_token
 HF_MODEL_REPO=your_huggingface_repository
+AQICN_API_KEY=your_aqicn_api_key
 ```
 
 ### Required Credentials
@@ -365,6 +366,7 @@ HF_MODEL_REPO=your_huggingface_repository
 | `SUPABASE_DB_URL`  | PostgreSQL connection string                 |
 | `HF_TOKEN`         | Hugging Face authentication with write access |
 | `HF_MODEL_REPO`    | Destination repository for model artifacts   |
+| `AQICN_API_KEY`    | Authentication for AQICN API                 |
 
 > **Security:** Never commit `.env` or expose API keys, database credentials, or Hugging Face tokens in source code.
 
