@@ -82,7 +82,7 @@ The training pipeline evaluated five candidate models against a naive Persistenc
 
 | Model                |      RMSE |       MAE |  R² Score |
 | -------------------- | --------: | --------: | --------: |
-| Persistence Baseline |    51.08 |    33.00 |    1.287 |
+| Persistence Baseline |    51.08 |    33.00 |    0.028 |
 | XGBoost              |    43.49 |    32.66 |    0.657 |
 | LightGBM             |    35.52 |    24.98 |    0.106 |
 | **Random Forest 🏆** | **33.34** | **23.02** | **0.71** |
