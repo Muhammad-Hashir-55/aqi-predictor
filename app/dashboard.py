@@ -176,11 +176,7 @@ def main():
 
     # --- SIDEBAR INFO ---
     with st.sidebar:
-        st.markdown("""
-        <a href="https://sialkot-aqi-predictor.streamlit.app" target="_blank">
-            <img src="https://img.icons8.com/color/96/airflow.png" width="80" alt="AQI Predictor">
-        </a>
-        """, unsafe_allow_html=True)
+        st.markdown("# 🌬️")
         st.markdown("## 🎛️ System Status")
         st.success("✅ **Pipeline:** Active (Hourly)")
         st.info("☁️ **Registry:** Hugging Face Hub")
