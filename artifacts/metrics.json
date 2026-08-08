@@ -1,23 +1,33 @@
 {
+  "xgboost": {
+    "rmse": 43.48589040472049,
+    "mae": 32.65892826010602,
+    "r2": -0.6573598191666956
+  },
+  "lightgbm": {
+    "rmse": 35.51814640866984,
+    "mae": 24.982476377376486,
+    "r2": -0.10565760605196961
+  },
   "random_forest": {
-    "rmse": 37.859180757401425,
-    "mae": 28.793521792597055,
-    "r2": -0.2902521247595955
+    "rmse": 33.34479868031814,
+    "mae": 23.020533438343847,
+    "r2": 0.025512503608014492
   },
   "ridge": {
-    "rmse": 43.27436952703544,
-    "mae": 34.2776255715376,
-    "r2": -0.6857518990164935
+    "rmse": 45.20315891576343,
+    "mae": 35.541135815060215,
+    "r2": -0.7908435319293472
   },
   "pytorch_mlp": {
-    "rmse": 41.6945885552269,
-    "mae": 30.11842799223671,
-    "r2": -0.5649178494642373
+    "rmse": 40.62707511267515,
+    "mae": 28.610348530662282,
+    "r2": -0.44660907681198014
   },
   "persistence_baseline": {
-    "rmse": 50.46417205799287,
-    "mae": 32.611369509043925,
-    "r2": -1.2924425659089982
+    "rmse": 51.07877702276154,
+    "mae": 32.996344647519585,
+    "r2": -1.2866571445947312
   },
   "_selected": "random_forest",
   "_feature_cols": [
@@ -30,11 +40,11 @@
     "pm10",
     "nh3",
     "aqi",
-    "aqi_change_rate",
-    "pollutant_sum",
-    "pm_ratio",
-    "pm25_pm10_sum",
-    "no2_o3_ratio",
+    "temperature",
+    "humidity",
+    "pressure",
+    "wind_speed",
+    "wind_direction",
     "hour",
     "day",
     "day_of_week",
@@ -46,9 +56,22 @@
     "dow_cos",
     "month_sin",
     "month_cos",
-    "temperature",
-    "humidity",
-    "pressure",
-    "wind_speed"
+    "aqi_change_rate",
+    "pollutant_sum",
+    "pm_ratio",
+    "pm25_pm10_sum",
+    "no2_o3_ratio",
+    "wind_u",
+    "wind_v",
+    "wind_u_pm25",
+    "wind_v_pm25",
+    "temp_humidity_index",
+    "thermal_inversion_flag",
+    "aqi_lag_6h",
+    "aqi_lag_12h",
+    "aqi_lag_24h",
+    "pm25_rolling_mean_6h",
+    "pm25_rolling_std_24h",
+    "aqi_rolling_mean_24h"
   ]
 }

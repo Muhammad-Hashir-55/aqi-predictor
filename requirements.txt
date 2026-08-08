@@ -14,3 +14,6 @@ uvicorn>=0.30
 matplotlib>=3.8
 seaborn>=0.13
 joblib
+xgboost
+optuna
+lightgbm
