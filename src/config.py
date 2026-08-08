@@ -24,14 +24,15 @@ CITY = CityConfig(name="Sialkot", lat=32.4945, lon=74.5229)
 
 # --- API keys / secrets (all optional at import time, validated at call time) ---
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
-HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY", "")
-HOPSWORKS_PROJECT = os.getenv("HOPSWORKS_PROJECT", "aqi_predictor")
 
-# --- Feature store naming ---
-FEATURE_GROUP_NAME = "aqi_features"
-FEATURE_GROUP_VERSION = 1
-FEATURE_VIEW_NAME = "aqi_feature_view"
-MODEL_NAME = "aqi_forecast_model"
+# --- Supabase (Postgres) feature store ---
+# Use the "Transaction pooler" connection string from Supabase -> Settings -> Database
+SUPABASE_DB_URL = os.getenv("SUPABASE_DB_URL", "")
+FEATURES_TABLE = "aqi_features"
+
+# --- Hugging Face Hub model registry (used by training_pipeline.py) ---
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_MODEL_REPO = os.getenv("HF_MODEL_REPO", "")  # e.g. "your-username/aqi-forecast-model"
 
 # --- AQI hazard thresholds (US EPA scale, 0-500) ---
 AQI_HAZARD_LEVELS = {

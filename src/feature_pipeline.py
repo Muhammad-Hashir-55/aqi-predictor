@@ -3,12 +3,12 @@ Feature pipeline for the Pearls AQI Predictor.
 
 1. Fetches raw weather + pollution data from OpenWeather.
 2. Computes model input features (time-based, weather, pollutant, derived).
-3. Writes the feature row to the Hopsworks Feature Store.
+3. Writes the feature row to the Supabase (Postgres) feature store.
 
 Run standalone:
     python src/feature_pipeline.py
 
-Also importable — backfill_historical.py reuses fetch_air_pollution() / build_feature_row().
+Also importable — backfill_historical.py reuses fetch_air_pollution_range() / _row_from_entry().
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from typing import Optional
 import pandas as pd
 import requests
 
-from config import CITY, OPENWEATHER_API_KEY, FEATURE_GROUP_NAME, FEATURE_GROUP_VERSION
+from config import CITY, OPENWEATHER_API_KEY
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -80,6 +80,23 @@ def fetch_air_pollution(lat: float, lon: float, dt: Optional[datetime] = None) -
     return resp.json()
 
 
+def fetch_air_pollution_range(lat: float, lon: float, start_dt: datetime, end_dt: datetime) -> dict:
+    """Fetch historical air pollution data for a date range in one call.
+    Used by backfill_historical.py so we don't burn one API call per hour."""
+    _require_api_key()
+    resp = requests.get(
+        AIR_POLLUTION_HISTORY_URL,
+        params={
+            "lat": lat, "lon": lon,
+            "start": int(start_dt.timestamp()), "end": int(end_dt.timestamp()),
+            "appid": OPENWEATHER_API_KEY,
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def fetch_weather(lat: float, lon: float) -> dict:
     """Fetch current weather. (OpenWeather's free tier has no historical weather endpoint,
     so backfill only carries pollution + time features — see backfill_historical.py.)"""
@@ -93,13 +110,12 @@ def fetch_weather(lat: float, lon: float) -> dict:
     return resp.json()
 
 
-def build_feature_row(
-    pollution_json: dict,
+def _row_from_entry(
+    entry: dict,
     weather_json: Optional[dict] = None,
     previous_aqi: Optional[float] = None,
 ) -> dict:
-    """Turn raw API payloads into a flat feature dict ready for the feature store."""
-    entry = pollution_json["list"][0]
+    """Turn one raw air-pollution list entry into a flat feature dict."""
     components = entry["components"]
     ts = datetime.fromtimestamp(entry["dt"], tz=timezone.utc)
 
@@ -145,48 +161,121 @@ def build_feature_row(
     return row
 
 
-def get_previous_aqi(fs_project=None) -> Optional[float]:
+def build_feature_row(
+    pollution_json: dict,
+    weather_json: Optional[dict] = None,
+    previous_aqi: Optional[float] = None,
+) -> dict:
+    """Turn a single-entry air-pollution API response into a flat feature dict."""
+    entry = pollution_json["list"][0]
+    return _row_from_entry(entry, weather_json, previous_aqi)
+
+
+FEATURE_COLUMNS = [
+    "city", "timestamp", "unix_time", "co", "no", "no2", "o3", "so2",
+    "pm2_5", "pm10", "nh3", "aqi", "aqi_change_rate",
+    "hour", "day", "day_of_week", "month", "is_weekend",
+    "temperature", "humidity", "pressure", "wind_speed",
+]
+
+CREATE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS aqi_features (
+    city TEXT,
+    timestamp TIMESTAMPTZ,
+    unix_time BIGINT PRIMARY KEY,
+    co DOUBLE PRECISION,
+    no DOUBLE PRECISION,
+    no2 DOUBLE PRECISION,
+    o3 DOUBLE PRECISION,
+    so2 DOUBLE PRECISION,
+    pm2_5 DOUBLE PRECISION,
+    pm10 DOUBLE PRECISION,
+    nh3 DOUBLE PRECISION,
+    aqi DOUBLE PRECISION,
+    aqi_change_rate DOUBLE PRECISION,
+    hour INTEGER,
+    day INTEGER,
+    day_of_week INTEGER,
+    month INTEGER,
+    is_weekend INTEGER,
+    temperature DOUBLE PRECISION,
+    humidity DOUBLE PRECISION,
+    pressure DOUBLE PRECISION,
+    wind_speed DOUBLE PRECISION
+);
+"""
+
+
+def get_db_engine():
+    from sqlalchemy import create_engine
+    from config import SUPABASE_DB_URL
+
+    if not SUPABASE_DB_URL:
+        raise RuntimeError("SUPABASE_DB_URL is not set. Add it to your .env or GitHub Secrets.")
+    return create_engine(SUPABASE_DB_URL)
+
+
+def ensure_table(engine) -> None:
+    """Create the features table if it doesn't exist yet."""
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        conn.execute(text(CREATE_TABLE_SQL))
+
+
+def get_previous_aqi(engine=None) -> Optional[float]:
     """Look up the most recent AQI value already in the feature store, for change-rate calc.
-    Returns None if the feature group is empty or unreachable (first-ever run)."""
-    if fs_project is None:
+    Returns None if the table is empty or unreachable (first-ever run)."""
+    if engine is None:
         return None
     try:
-        fg = fs_project.get_feature_group(FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
-        df = fg.read()
-        if df.empty:
-            return None
-        return float(df.sort_values("unix_time").iloc[-1]["aqi"])
-    except Exception as e:  # feature group may not exist yet
+        from sqlalchemy import text
+        ensure_table(engine)
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT aqi FROM aqi_features ORDER BY unix_time DESC LIMIT 1")
+            ).fetchone()
+        return float(result[0]) if result else None
+    except Exception as e:  # table may not exist yet, or connection still propagating
         log.warning("Could not fetch previous AQI (likely first run): %s", e)
         return None
 
 
 def write_to_feature_store(row: dict) -> None:
-    """Insert one feature row into the Hopsworks feature store."""
-    import hopsworks
-    from config import HOPSWORKS_API_KEY, HOPSWORKS_PROJECT
+    """Insert one feature row into the Supabase (Postgres) feature store."""
+    write_rows_to_feature_store([row])
 
-    if not HOPSWORKS_API_KEY:
-        raise RuntimeError("HOPSWORKS_API_KEY is not set. Add it to your .env or GitHub Secrets.")
 
-    project = hopsworks.login(api_key_value=HOPSWORKS_API_KEY, project=HOPSWORKS_PROJECT)
-    fs = project.get_feature_store()
+def write_rows_to_feature_store(rows: list) -> None:
+    """Insert many feature rows in one batch — used by backfill_historical.py.
+    Safe to re-run: duplicate unix_time values (from overlapping chunk boundaries,
+    or re-running backfill/the hourly pipeline over an already-covered hour) are
+    silently skipped rather than raising a constraint error."""
+    if not rows:
+        log.info("No rows to write.")
+        return
+    engine = get_db_engine()
+    ensure_table(engine)
 
-    df = pd.DataFrame([row])
+    df = pd.DataFrame(rows)[FEATURE_COLUMNS]
+    before = len(df)
+    df = df.drop_duplicates(subset="unix_time", keep="last")
+    if len(df) < before:
+        log.info("Dropped %d duplicate row(s) within this batch (chunk-boundary overlap)", before - len(df))
 
-    try:
-        fg = fs.get_feature_group(FEATURE_GROUP_NAME, version=FEATURE_GROUP_VERSION)
-    except Exception:
-        fg = fs.create_feature_group(
-            name=FEATURE_GROUP_NAME,
-            version=FEATURE_GROUP_VERSION,
-            description="Hourly AQI + weather features for Sialkot",
-            primary_key=["city", "unix_time"],
-            event_time="timestamp",
-            online_enabled=True,
-        )
-    fg.insert(df, write_options={"wait_for_job": True})
-    log.info("Inserted feature row for %s at %s", row["city"], row["timestamp"])
+    from sqlalchemy import text
+    columns = ", ".join(FEATURE_COLUMNS)
+    placeholders = ", ".join(f":{c}" for c in FEATURE_COLUMNS)
+    upsert_sql = text(
+        f"INSERT INTO aqi_features ({columns}) VALUES ({placeholders}) "
+        f"ON CONFLICT (unix_time) DO NOTHING"
+    )
+
+    records = df.to_dict(orient="records")
+    with engine.begin() as conn:
+        conn.execute(upsert_sql, records)
+
+    log.info("Wrote %d feature rows to Supabase (%s to %s) — existing timestamps were skipped, not duplicated",
+              len(records), rows[0]["timestamp"], rows[-1]["timestamp"])
 
 
 def run(dry_run: bool = False) -> dict:
@@ -196,13 +285,9 @@ def run(dry_run: bool = False) -> dict:
     weather_json = fetch_weather(CITY.lat, CITY.lon)
 
     previous_aqi = None
-    project = None
     if not dry_run:
-        import hopsworks
-        from config import HOPSWORKS_API_KEY, HOPSWORKS_PROJECT
-        if HOPSWORKS_API_KEY:
-            project = hopsworks.login(api_key_value=HOPSWORKS_API_KEY, project=HOPSWORKS_PROJECT)
-            previous_aqi = get_previous_aqi(project.get_feature_store() if project else None)
+        engine = get_db_engine()
+        previous_aqi = get_previous_aqi(engine)
 
     row = build_feature_row(pollution_json, weather_json, previous_aqi)
     log.info("Computed feature row: AQI=%.1f, PM2.5=%.1f", row["aqi"], row["pm2_5"])
