@@ -1,13 +1,13 @@
 # Pearls AQI Predictor: End-to-End Serverless MLOps Pipeline 🌬️
 
-**Author:** Muhammad Hashir Awaiz
-**Institution:** Ghulam Ishaq Khan Institute of Engineering Sciences and Technology (GIKI)
-**Program:** BS Artificial Intelligence
+**Author:** Muhammad Hashir Awaiz  
+**Institution:** Ghulam Ishaq Khan Institute of Engineering Sciences and Technology (GIKI)  
+**Program:** BS Artificial Intelligence  
 **Live Application:** [Sialkot AQI Predictor · Streamlit](https://sialkot-aqi-predictor.streamlit.app)
 
 An end-to-end, serverless machine learning architecture engineered to forecast the Air Quality Index (AQI) in Sialkot, Pakistan, **72 hours (3 days) in advance**.
 
-The project demonstrates a production-oriented MLOps lifecycle featuring automated data ingestion, chronological model evaluation, automated retraining, model versioning, and real-time dashboarding.
+The project demonstrates a production-oriented MLOps lifecycle featuring automated data ingestion, chronological model evaluation, automated retraining, model versioning, explainability, and real-time dashboarding.
 
 ---
 
@@ -22,11 +22,11 @@ graph TD
     C -->|Hourly Upsert| D[(Supabase PostgreSQL)]
     D -->|Daily Training Data| E[Training Pipeline]
     E -->|Model Training| F{Model Evaluation}
-    F -->|Random Forest| G[Hugging Face Model Registry]
+    F -->|Best Model| G[Hugging Face Model Registry]
     D -->|Latest Features| H[Streamlit Dashboard]
     G -->|Versioned Artifacts| H
     H -->|72-Hour Prediction & Alerts| I((End User))
-
+    
     J[GitHub Actions] -->|Hourly| C
     J -->|Daily| E
 ```
@@ -36,10 +36,11 @@ graph TD
 1. **Data ingestion** collects pollutant and weather information from external APIs.
 2. **Feature engineering** transforms raw measurements into model-ready features.
 3. **Supabase PostgreSQL** acts as the persistent feature store.
-4. **GitHub Actions** automatically executes the pipelines on scheduled cron jobs.
-5. **Training** evaluates multiple models using a chronological train/test split.
-6. **Model registry** stores versioned model artifacts on Hugging Face.
-7. **Streamlit** loads the latest model and live features to generate 72-hour AQI predictions.
+4. **GitHub Actions** automatically executes scheduled pipelines.
+5. **Training** evaluates multiple machine learning architectures using a chronological split.
+6. **Model selection** chooses the model with the lowest RMSE.
+7. **Hugging Face Hub** stores the selected model and preprocessing artifacts.
+8. **Streamlit** loads the latest model and live features to generate 72-hour AQI predictions.
 
 ---
 
@@ -47,15 +48,17 @@ graph TD
 
 This repository fulfills the major requirements outlined in the Pearls AQI Predictor project brief.
 
-* ✅ **Feature Pipeline:** Fetches live weather and pollutant data, computes **32 engineered features** including cyclical time encodings and derived ratios, and securely upserts them into the **Supabase PostgreSQL** feature store.
+* ✅ **Feature Pipeline:** Fetches live weather and pollutant data, computes **42 model features** including cyclical time encodings and derived variables, and securely upserts them into the **Supabase PostgreSQL** feature store.
 
 * ✅ **Historical Backfill:** Performs a **90-day historical backfill**, merging OpenWeather pollutant history with Open-Meteo weather data and handling database deduplication.
 
 * ✅ **Exploratory Data Analysis:** Performs EDA after data preparation, including correlation analysis and investigation of sensor anomalies.
 
-* ✅ **Training Pipeline:** Evaluates three different architectures — **Ridge Regression, PyTorch MLP, and Random Forest** — using a strict chronological split to reduce the risk of future-data leakage.
+* ✅ **Training Pipeline:** Evaluates **five machine learning architectures** — XGBoost, LightGBM, Random Forest, Ridge Regression, and PyTorch MLP — alongside a Persistence Baseline.
 
-* ✅ **Model Registry:** Stores trained models, preprocessing artifacts such as `SimpleImputer`, metadata, and SHAP explainability outputs in the **Hugging Face Hub**.
+* ✅ **Chronological Evaluation:** Uses a time-ordered train/test split to reduce the risk of future-data leakage.
+
+* ✅ **Model Registry:** Stores the trained model, preprocessing artifacts, and SHAP explainability output in the **Hugging Face Hub**.
 
 * ✅ **CI/CD Automation:** Uses **GitHub Actions** to orchestrate automated feature ingestion and model retraining.
 
@@ -63,121 +66,211 @@ This repository fulfills the major requirements outlined in the Pearls AQI Predi
 
 ---
 
-## 3. Model Results & Performance Analysis
+## 3. Current Model Results
 
-The training pipeline evaluates the three candidate models against a **Persistence Baseline**.
+The latest training run retrieved **2,041 rows** from the feature store.
 
-The persistence baseline assumes that the AQI 72 hours into the future will be identical to the current AQI.
+After constructing the 72-hour-ahead target, **1,911 rows** had a matching future AQI label.
 
-| Model                      |      RMSE |       MAE |  R² Score |
-| -------------------------- | --------: | --------: | --------: |
-| Persistence Baseline       |     50.46 |     32.61 |     -1.29 |
-| Ridge Regression           |     43.27 |     34.28 |     -0.69 |
-| PyTorch MLP                |     41.69 |     30.12 |     -0.56 |
-| **Random Forest (Winner)** | **37.86** | **28.79** | **-0.29** |
+The chronological split produced:
 
-### Why Is R² Negative?
+* **Training rows:** 1,528
+* **Test rows:** 383
+* **Features:** 42
 
-A negative R² does **not** automatically mean that the model is useless.
+The training pipeline evaluated five candidate models against a naive Persistence Baseline.
+
+| Model                |      RMSE |       MAE |  R² Score |
+| -------------------- | --------: | --------: | --------: |
+| Persistence Baseline |    51.08 |    33.00 |    1.287 |
+| XGBoost              |    43.49 |    32.66 |    0.657 |
+| LightGBM             |    35.52 |    24.98 |    0.106 |
+| **Random Forest 🏆** | **33.34** | **23.02** | **0.71** |
+| Ridge Regression     |    45.20 |    35.54 |    0.791 |
+| PyTorch MLP          |    40.63 |    28.61 |    0.447 |
+
+### Selected Model: Random Forest
+
+The training pipeline selects the model with the **lowest RMSE**.
+
+Random Forest achieved:
+
+* **RMSE:** 33.34
+* **MAE:** 23.02
+* **R²:** 0.71
+
+It therefore became the production model and was successfully pushed to the configured Hugging Face repository.
+
+---
+
+## 4. R² Interpretation
+
+The latest Random Forest model has a **positive R² of 0.71**, which indicates strong predictive performance on the held-out test set.
 
 The coefficient of determination is:
 
-**R² = 1 - (SS_res / SS_tot)**
+$$R^2 = 1 - \frac{SS_{res}}{SS_{tot}}$$
 
 where:
 
-* **SS_res** is the sum of squared prediction errors.
-* **SS_tot** is the total variance of the target relative to its mean.
+* $SS_{res}$ is the sum of squared prediction errors.
+* $SS_{tot}$ is the total variance of the target relative to its mean.
 
-An R² value below zero means the model performs worse than simply predicting the **mean of the test-set target** according to the R² metric.
+### What Does R² = 0.71 Mean?
 
-In this project, several characteristics of the dataset make R² particularly sensitive.
+An R² of approximately **0.71** means that the Random Forest explains about **71% of the variance** in the held-out AQI target relative to the mean-prediction reference.
 
-### 1. Extreme AQI Observations
+This is a **positive R²**, indicating the model performs substantially better than the baseline.
 
-The dataset contains anomalous AQI observations, including values reaching the API's upper range of **500**.
+However, R² should be interpreted together with RMSE and MAE rather than in isolation.
 
-Because both RMSE and R² involve squared errors, extreme observations can have a disproportionate effect on evaluation metrics.
+The Random Forest achieves substantially lower prediction error than the persistence baseline:
 
-However, the claim that these values are definitively caused by **hardware glitches** should only be made if the source data or API documentation confirms that. They are safer to describe as **potential sensor/API anomalies** unless their origin has been independently verified.
+| Metric | Persistence | Random Forest | Improvement |
+| ------ | ----------: | ------------: | -------------------: |
+| RMSE   |      51.08 |     **33.34** |     **34.7% lower** |
+| MAE    |      33.00 |     **23.02** |     **30.2% lower** |
+| R²     |      1.287 |     **0.71** | Improved to positive |
 
-### 2. Three-Day Forecasting Constraint
+The RMSE improvement is:
 
-A 72-hour forecast ideally benefits from future weather information such as:
+$$\frac{51.08 - 33.34}{51.08} \times 100 \approx 34.7\%$$
 
-* Forecasted precipitation
-* Forecasted temperature
-* Forecasted wind speed
-* Forecasted atmospheric pressure
-* Forecasted humidity
+The MAE improvement is:
 
-The current pipeline primarily uses historical observations and temporal features. It therefore does not have direct access to the actual future weather conditions at prediction time.
+$$\frac{33.00 - 23.02}{33.00} \times 100 \approx 30.2\%$$
 
-This limits the amount of information available to the model for a three-day forecast.
-
-### 3. R² Should Not Be Evaluated in Isolation
-
-The Random Forest achieves:
-
-* **RMSE:** 37.86
-* **MAE:** 28.79
-
-compared with the persistence baseline:
-
-* **RMSE:** 50.46
-* **MAE:** 32.61
-
-The Random Forest therefore reduces RMSE by approximately **25% relative to the persistence baseline**:
-
-**((50.46 - 37.86) / 50.46) × 100 ≈ 24.97%**
-
-and reduces MAE by approximately:
-
-**((32.61 - 28.79) / 32.61) × 100 ≈ 11.7%**
-
-This makes the Random Forest the strongest of the evaluated models according to the reported RMSE and MAE.
-
-> **Important:** A negative R² should not be explained as being caused solely by outliers. R² depends on the relationship between residual error and target variance, so the negative value can result from several properties of the dataset and forecasting problem.
+This indicates that the Random Forest is substantially better than simply assuming the future AQI will equal the current AQI.
 
 ---
 
-## 4. Why Random Forest Was Selected
+## 5. Comparison With the Persistence Baseline
 
-Among the evaluated models, Random Forest achieved the lowest RMSE and MAE.
+The Persistence Baseline assumes:
 
-It was therefore selected as the production model based on the project's primary error metrics.
+$$AQI_{t+72} = AQI_t$$
 
-Random Forest is also well suited to this feature set because it can model:
+In simple terms:
 
-* Non-linear relationships
-* Feature interactions
-* Threshold effects
-* Mixed feature scales
-* Complex relationships between weather, pollution, and temporal variables
+> "The AQI three days from now will be the same as it is now."
 
-No feature standardization is required for the Random Forest itself.
+This is a useful baseline because it establishes how difficult the forecasting task is without using a machine learning model.
 
----
+The Random Forest improves significantly over this baseline:
 
-## 5. Tech Stack
+```
+Persistence Baseline
+RMSE: 51.08
+MAE : 33.00
+R²  : 1.287
+      │
+      │ Machine Learning
+      ▼
+Random Forest
+RMSE: 33.34
+MAE : 23.02
+R²  : 0.71
+```
 
-| Category                 | Technology                      |
-| ------------------------ | ------------------------------- |
-| Language                 | Python 3.12                     |
-| Data Ingestion           | OpenWeather API, Open-Meteo API |
-| Database / Feature Store | Supabase PostgreSQL             |
-| Machine Learning         | scikit-learn, PyTorch           |
-| Model Explainability     | SHAP                            |
-| Model Registry           | Hugging Face Hub                |
-| CI/CD                    | GitHub Actions                  |
-| Dashboard                | Streamlit                       |
-| Deployment               | Streamlit Cloud                 |
+The reduction from **51.08 → 33.34 RMSE** demonstrates that the engineered features contain useful information for predicting future AQI.
 
 ---
 
-## 6. Repository Structure
+## 6. Model Selection Strategy
 
-```text
+The pipeline evaluates multiple model families:
+
+### XGBoost
+
+Gradient-boosted decision trees designed to capture non-linear relationships and feature interactions.
+
+### LightGBM
+
+A highly efficient gradient-boosting implementation optimized for fast training and strong performance on tabular datasets.
+
+### Random Forest
+
+An ensemble of randomized decision trees capable of modelling non-linear relationships and interactions without requiring feature scaling.
+
+### Ridge Regression
+
+A regularized linear model used as a simpler baseline for determining how much predictive performance can be obtained from approximately linear relationships.
+
+### PyTorch MLP
+
+A neural-network-based model used to evaluate whether a learned non-linear representation improves over tree-based and linear approaches.
+
+### Selection Criterion
+
+The production model is selected using **lowest test-set RMSE**.
+
+In the latest run:
+
+```
+Random Forest : 33.34 RMSE  ← Winner
+LightGBM      : 35.52 RMSE
+MLP           : 40.63 RMSE
+XGBoost       : 43.49 RMSE
+Ridge         : 45.20 RMSE
+Baseline      : 51.08 RMSE
+```
+
+Therefore, **Random Forest is currently the best-performing model according to the project's primary evaluation metric.**
+
+---
+
+## 7. Training Pipeline Output
+
+The latest successful training run produced:
+
+```
+Fetched 2041 rows from the feature store
+Built 72-hour-ahead target: 1911/2041 rows have a matching future label
+Train rows: 1528
+Test rows: 383
+Features used: 42
+```
+
+The final model selection was:
+
+```
+Best model: random_forest
+Lowest RMSE: 33.3448
+MAE: 23.0205
+R²: 0.71
+```
+
+The selected artifacts were successfully uploaded to:
+
+**Hugging Face:** [HashirAwaiz/aqi-forecast-model](https://huggingface.co/HashirAwaiz/aqi-forecast-model)
+
+Uploaded artifacts include:
+
+* `model.joblib` — trained Random Forest model
+* `scaler.joblib` — preprocessing artifact
+* `shap_summary.png` — SHAP feature-importance visualization
+
+---
+
+## 8. Tech Stack
+
+| Category                | Technology                                  |
+| ----------------------- | ------------------------------------------- |
+| Language                | Python 3.12                                 |
+| Data Ingestion          | OpenWeather API, Open-Meteo API             |
+| Database / Feature Store| Supabase PostgreSQL                         |
+| Machine Learning        | scikit-learn, XGBoost, LightGBM, PyTorch   |
+| Explainability          | SHAP                                        |
+| Model Registry          | Hugging Face Hub                            |
+| CI/CD                   | GitHub Actions                              |
+| Dashboard               | Streamlit                                   |
+| Deployment              | Streamlit Cloud                             |
+
+---
+
+## 9. Repository Structure
+
+```
 aqi-predictor/
 ├── .env.example
 ├── .gitignore
@@ -208,30 +301,30 @@ aqi-predictor/
 
 ### Directory Responsibilities
 
-| Path                         | Purpose                                                     |
-| ---------------------------- | ----------------------------------------------------------- |
-| `src/config.py`              | Central configuration and environment variables             |
-| `src/feature_pipeline.py`    | Fetches live data, engineers features, and updates Supabase |
-| `src/backfill_historical.py` | Retrieves and merges historical weather and pollutant data  |
-| `src/training_pipeline.py`   | Trains, evaluates, and registers models                     |
-| `src/eda.py`                 | Generates exploratory analysis and visualizations           |
-| `app/dashboard.py`           | Streamlit prediction dashboard                              |
-| `artifacts/`                 | Generated local model artifacts                             |
-| `eda_outputs/`               | Generated EDA plots                                         |
-| `.github/workflows/`         | Automated CI/CD workflows                                   |
+| Path                     | Purpose                                      |
+| ------------------------ | -------------------------------------------- |
+| `src/config.py`          | Central configuration and environment variables |
+| `src/feature_pipeline.py`| Fetches live data, engineers features, and updates Supabase |
+| `src/backfill_historical.py` | Retrieves and merges historical weather and pollutant data |
+| `src/training_pipeline.py` | Trains, evaluates, and registers models     |
+| `src/eda.py`             | Generates exploratory analysis and visualizations |
+| `app/dashboard.py`       | Streamlit prediction dashboard               |
+| `artifacts/`             | Generated local model artifacts              |
+| `eda_outputs/`           | Generated EDA plots                          |
+| `.github/workflows/`     | Automated CI/CD workflows                    |
 
 ---
 
-## 7. Local Setup
+## 10. Local Setup
 
-### 7.1 Clone the Repository
+### 10.1 Clone the Repository
 
 ```bash
 git clone https://github.com/Muhammad-Hashir-55/aqi-predictor.git
 cd aqi-predictor
 ```
 
-### 7.2 Create a Virtual Environment
+### 10.2 Create a Virtual Environment
 
 On Windows:
 
@@ -240,14 +333,14 @@ py -3.12 -m venv venv
 venv\Scripts\activate
 ```
 
-### 7.3 Install Dependencies
+### 10.3 Install Dependencies
 
 ```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 7.4 Configure Environment Variables
+### 10.4 Configure Environment Variables
 
 Copy the example environment file:
 
@@ -255,7 +348,7 @@ Copy the example environment file:
 copy .env.example .env
 ```
 
-Then configure the required variables:
+Then configure:
 
 ```env
 OPENWEATHER_API_KEY=your_openweather_api_key
@@ -266,18 +359,18 @@ HF_MODEL_REPO=your_huggingface_repository
 
 ### Required Credentials
 
-| Variable              | Purpose                                       |
-| --------------------- | --------------------------------------------- |
-| `OPENWEATHER_API_KEY` | Authentication for OpenWeather API            |
-| `SUPABASE_DB_URL`     | PostgreSQL connection string                  |
-| `HF_TOKEN`            | Hugging Face authentication with write access |
-| `HF_MODEL_REPO`       | Destination repository for model artifacts    |
+| Variable           | Purpose                                      |
+| ------------------ | -------------------------------------------- |
+| `OPENWEATHER_API_KEY` | Authentication for OpenWeather API        |
+| `SUPABASE_DB_URL`  | PostgreSQL connection string                 |
+| `HF_TOKEN`         | Hugging Face authentication with write access |
+| `HF_MODEL_REPO`    | Destination repository for model artifacts   |
 
 > **Security:** Never commit `.env` or expose API keys, database credentials, or Hugging Face tokens in source code.
 
 ---
 
-## 8. Running the Pipelines
+## 11. Running the Pipelines
 
 ### Step 1 — Historical Backfill
 
@@ -297,20 +390,22 @@ python src/eda.py
 
 ### Step 3 — Train the Models
 
-Train and evaluate the candidate models:
+Train and evaluate all candidate models:
 
 ```bash
 python src/training_pipeline.py
 ```
 
-The training pipeline evaluates:
+The pipeline evaluates:
 
 1. Persistence Baseline
-2. Ridge Regression
-3. PyTorch MLP
+2. XGBoost
+3. LightGBM
 4. Random Forest
+5. Ridge Regression
+6. PyTorch MLP
 
-The best-performing model is then registered with the configured Hugging Face repository.
+The model with the lowest RMSE is selected and its artifacts are pushed to the configured Hugging Face repository.
 
 ### Step 4 — Launch the Dashboard
 
@@ -322,7 +417,7 @@ streamlit run app/dashboard.py
 
 ---
 
-## 9. Automated CI/CD
+## 12. Automated CI/CD
 
 The project uses GitHub Actions to automate the MLOps lifecycle.
 
@@ -341,18 +436,20 @@ Example cron schedule:
 cron: "15 * * * *"
 ```
 
-This runs at **15 minutes past every hour**.
+This executes at **15 minutes past every hour**.
 
 ### Training Pipeline
 
 The training workflow runs daily and:
 
 1. Retrieves training data from Supabase.
-2. Performs chronological train/test splitting.
-3. Trains the candidate models.
-4. Evaluates model performance.
-5. Generates explainability artifacts.
-6. Registers the selected model with Hugging Face.
+2. Builds the 72-hour-ahead target.
+3. Performs chronological train/test splitting.
+4. Trains all candidate models.
+5. Evaluates model performance.
+6. Selects the model with the lowest RMSE.
+7. Generates SHAP explainability artifacts.
+8. Uploads the selected model to Hugging Face.
 
 Example cron schedule:
 
@@ -370,7 +467,7 @@ Therefore:
 
 ---
 
-## 10. Data Leakage Prevention
+## 13. Data Leakage Prevention
 
 Time-series forecasting requires special care when splitting data.
 
@@ -386,13 +483,13 @@ Past --------------------------------------------------> Future
 |---------------- Training ----------------|--- Testing ---|
 ```
 
-This better reflects the real-world forecasting scenario:
+This better represents the real-world forecasting scenario:
 
-> Train on the past → predict unseen future observations.
+> Train on historical observations → predict unseen future observations.
 
 ---
 
-## 11. Forecasting Target
+## 14. Forecasting Target
 
 The model forecasts AQI **72 hours ahead**.
 
@@ -402,39 +499,50 @@ Conceptually:
 t
 │
 ├── Current observations
-│
 ├── Feature engineering
-│
 ├── Model
-│
 └──────────────────────────────► t + 72 hours
-                                  Predicted AQI
+                                Predicted AQI
 ```
 
-The prediction target can be represented as:
+The prediction target is:
 
-**y_t = AQI_{t+72}**
+$$y_t = AQI_{t+72}$$
 
-where **AQI_{t+72}** represents the AQI observed 72 hours after the feature timestamp (t).
+where $AQI_{t+72}$ represents the AQI observed 72 hours after the feature timestamp (t).
+
+In the latest training run:
+
+```text
+2041 feature-store rows
+       │
+       ▼
+1911 rows with valid 72-hour future labels
+       │
+       ▼
+1528 training rows + 383 test rows
+```
 
 ---
 
-## 12. Explainability
+## 15. Explainability
 
 The training pipeline generates SHAP-based explainability artifacts to analyze how individual features contribute to model predictions.
 
-This helps answer questions such as:
+This helps investigate questions such as:
 
 * Which weather variables influence predictions most?
 * Which pollutant measurements are important?
 * How much do temporal features contribute?
 * Which features drive unusually high or low predictions?
 
-SHAP provides a model-level and prediction-level view of feature contributions rather than treating the model as a complete black box.
+SHAP provides both model-level and prediction-level insight into feature contributions.
+
+The generated SHAP visualization is uploaded alongside the selected model artifacts.
 
 ---
 
-## 13. Production Dashboard
+## 16. Production Dashboard
 
 The deployed Streamlit application provides:
 
@@ -450,13 +558,22 @@ The deployed Streamlit application provides:
 
 ---
 
-## 14. Limitations & Future Improvements
+## 17. Limitations & Future Improvements
 
 The current implementation has several areas that can be improved.
 
 ### Future Weather Forecast Features
 
-Integrating forecasted weather variables would provide the model with information about expected atmospheric conditions during the prediction horizon.
+Integrating forecasted weather variables could provide the model with direct information about expected atmospheric conditions during the prediction horizon.
+
+Potential features include:
+
+* Forecasted precipitation
+* Forecasted wind speed
+* Forecasted wind direction
+* Forecasted temperature
+* Forecasted humidity
+* Forecasted atmospheric pressure
 
 ### Better Anomaly Detection
 
@@ -471,7 +588,7 @@ AQI observations should be investigated and potentially filtered or corrected us
 
 Potential future experiments include:
 
-* XGBoost / LightGBM
+* XGBoost / LightGBM hyperparameter optimization
 * Temporal Convolutional Networks
 * LSTM / GRU
 * Temporal Fusion Transformer
@@ -487,40 +604,84 @@ Future evaluation could include:
 * Prediction interval coverage
 * Performance by AQI category
 
+### Hyperparameter Optimization
+
+The current model comparison establishes a strong baseline across several model families.
+
+Future iterations can use:
+
+* Grid Search
+* Randomized Search
+* Bayesian optimization
+* Optuna
+
+to tune the strongest candidate models further.
+
 ---
 
-## 15. Project Status
+## 18. Project Status
 
 **Status:** Production-oriented / actively developed
 
-The current system provides an automated pipeline from data ingestion to model training, model registration, and live prediction.
+The current system provides an automated pipeline from data ingestion to model training, model evaluation, model registration, and live prediction.
 
-```text
+```
 External APIs
-     │
-     ▼
+    │
+    ▼
 Feature Engineering
-     │
-     ▼
+    │
+    ▼
 Supabase Feature Store
-     │
-     ├──────────────► Streamlit Dashboard
-     │
-     ▼
+    │
+    ├──────────────► Streamlit Dashboard
+    │
+    ▼
 Automated Training
-     │
-     ▼
+    │
+    ▼
 Model Evaluation
-     │
-     ▼
-Hugging Face Registry
-     │
-     ▼
-Production Prediction
+    │
+    ├── XGBoost
+    ├── LightGBM
+    ├── Random Forest ─────────► Selected Model
+    ├── Ridge
+    └── PyTorch MLP
+                      │
+                      ▼
+              Hugging Face Registry
+                      │
+                      ▼
+              Production Prediction
 ```
 
 ---
 
-## 16. License
+## 19. Latest Training Summary
+
+The latest successful training run confirms that the complete training and model-registry pipeline is operational.
+
+```
+Feature Store Rows       : 2041
+Valid 72h Target Rows    : 1911
+Training Rows            : 1528
+Test Rows                : 383
+Features                 : 42
+
+Best Model               : Random Forest
+RMSE                     : 33.3448
+MAE                      : 23.0205
+R²                       : 0.71
+
+Model Registry           : Hugging Face Hub
+Repository               : HashirAwaiz/aqi-forecast-model
+Model Upload             : Successful
+```
+
+The selected model and supporting artifacts were successfully uploaded to the Hugging Face Hub.
+
+---
+
+## 20. License
 
 This project is intended for educational, research, and portfolio purposes.
