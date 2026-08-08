@@ -1,0 +1,28 @@
+name: Hourly Feature Pipeline
+
+on:
+  schedule:
+    - cron: '15 * * * *' # Runs at minute 15 past every hour
+  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+
+jobs:
+  run-feature-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Execute Feature Pipeline
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: python src/feature_pipeline.py

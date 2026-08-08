@@ -51,3 +51,26 @@ def classify_aqi(aqi_value: float) -> str:
         if lo <= aqi_value <= hi:
             return label
     return "Hazardous"  # anything above 500
+
+
+# --- Feature definitions (Single Source of Truth) ---
+DB_FEATURE_COLUMNS = [
+    "city", "timestamp", "unix_time", "co", "no", "no2", "o3", "so2",
+    "pm2_5", "pm10", "nh3", "aqi", "aqi_change_rate",
+    "pollutant_sum", "pm_ratio", "pm25_pm10_sum", "no2_o3_ratio",
+    "hour", "day", "day_of_week", "month", "is_weekend",
+    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
+    "month_sin", "month_cos",
+    "temperature", "humidity", "pressure", "wind_speed",
+]
+
+# Excludes metadata/targets like 'city', 'timestamp', 'unix_time'
+TRAINING_FEATURE_COLS = [
+    "co", "no", "no2", "o3", "so2", "pm2_5", "pm10", "nh3",
+    "aqi", "aqi_change_rate", "pollutant_sum", "pm_ratio", 
+    "pm25_pm10_sum", "no2_o3_ratio",
+    "hour", "day", "day_of_week", "month", "is_weekend",
+    "hour_sin", "hour_cos", "dow_sin", "dow_cos", 
+    "month_sin", "month_cos",
+    "temperature", "humidity", "pressure", "wind_speed",
+]
