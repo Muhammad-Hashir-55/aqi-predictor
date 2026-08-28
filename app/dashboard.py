@@ -188,7 +188,7 @@ def main():
         st.markdown("**Program:** BS Artificial Intelligence")
         st.markdown("---")
         st.markdown("### 🔗 Links")
-        st.markdown("[📊 Live Dashboard](https://sialkot-aqi-predictor.streamlit.app)")
+        st.markdown("[📊 Live Dashboard](https://aqi-predictor-sialkot-data-science-project.streamlit.app/)")
         st.markdown("[💻 GitHub Repository](https://github.com/Muhammad-Hashir-55/aqi-predictor)")
         st.markdown("[🤖 Model Registry](https://huggingface.co/HashirAwaiz/aqi-forecast-model)")
 
