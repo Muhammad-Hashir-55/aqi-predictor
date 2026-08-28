@@ -3,7 +3,7 @@
 **Author:** Muhammad Hashir Awaiz  
 **Institution:** Ghulam Ishaq Khan Institute of Engineering Sciences and Technology (GIKI)  
 **Program:** BS Artificial Intelligence  
-**Live Application:** [Sialkot AQI Predictor · Streamlit](https://sialkot-aqi-predictor.streamlit.app)
+**Live Application:** [Sialkot AQI Predictor · Streamlit](https://aqi-predictor-sialkot-data-science-project.streamlit.app/)
 
 An end-to-end, serverless machine learning architecture engineered to forecast the Air Quality Index (AQI) in Sialkot, Pakistan, **72 hours (3 days) in advance**.
 
