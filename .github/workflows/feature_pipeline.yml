@@ -25,7 +25,6 @@ jobs:
         run: |
           python -c "import psycopg; print('psycopg:', psycopg.__version__)"
           pip show psycopg
-          pip show psycopg2-binary
 
       - name: Execute Feature Pipeline
         env:
