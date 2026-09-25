@@ -21,6 +21,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Verify PostgreSQL driver
+        run: |
+          python -c "import psycopg; print('psycopg:', psycopg.__version__)"
+          pip show psycopg
+          pip show psycopg2-binary
+
       - name: Execute Feature Pipeline
         env:
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
